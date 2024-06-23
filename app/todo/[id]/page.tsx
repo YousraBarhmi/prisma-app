@@ -1,9 +1,8 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 
 const TodoById = () => {
-  const router = useRouter();
   const { id } = useParams();
   const [todo, setTodo] = useState({
     title: '',

@@ -34,21 +34,22 @@ const Todos = () => {
 
   const handleDelete = async (id: string) => {
     try {
-      const response = await fetch(`/api/todo`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id }), // Send just the id
-      });
-  
-      if (response.ok) {
-        // Remove the deleted todo from state
-        setTodos(todos.filter(todo => todo.id !== id));
-        console.log(`Todo with ID ${id} deleted successfully.`);
-      } else {
-        console.error('Failed to delete todo:', response.statusText);
-      }
+    if (window.confirm('Are you sure you want to delete this todo?')) {
+        const response = await fetch(`/api/todo`, {
+          method: 'DELETE',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ id }), // Send just the id
+        });
+        if (response.ok) {
+          // Remove the deleted todo from state
+          setTodos(todos.filter(todo => todo.id !== id));
+          console.log(`Todo with ID ${id} deleted successfully.`);
+        } else {
+          console.error('Failed to delete todo:', response.statusText);
+        }
+    }
     } catch (error) {
       console.error('Error deleting todo:', error);
     }

@@ -76,7 +76,7 @@ const UpdateTodoForm = () => {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 my-8 ml-12">
             <div  className="flex flex-row items-baseline">
                 <label>Title:</label>
-                <input className="ml-4" type="text" value={formData.title} onChange={handleInputChange} />
+                <input className="ml-4" type="text" value={formData.title || ''} onChange={handleInputChange} />
             </div>
             <div  className="flex flex-row items-baseline">
                 <label>Description:</label>
