@@ -1,59 +1,56 @@
 "use client"
+import { todoSchema, Todo } from '@/lib/types';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
-// Define interface for Todo object
-interface Todo {
-  id: string;
-  title: string;
-  description?: string;
-  priority?: string;
-  assignedTo?: string;
-  notes?: string;
-}
+
+const fetchTodos = async () => {
+  const response = await fetch(`/api/todo`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch todo');
+  }
+  const data = await response.json();
+  return data; // Assuming the API returns the todo object directly
+};
 
 const Todos = () => {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    const fetchTodos = async () => {
-      try {
-        const response = await fetch('/api/todo');
-        if (!response.ok) {
-          throw new Error('Failed to fetch todos');
-        }
-        const data = await response.json();
-        setTodos(data as Todo[]); 
-      } catch (error) {
-        console.error('Error fetching todos:', error);
+  const { data: dataTodo = [], isLoading, error } = useQuery({
+    queryKey: ['todo'],
+    queryFn: () => fetchTodos(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await fetch(`/api/todo`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ id }),
+      });
+      if (!response.ok) {
+        throw new Error('Failed to delete todo');
       }
-    };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['todos'] });
 
-    fetchTodos();
-  }, []);
+      // QueryClient.invalidateQueries(['todos']);
+    },
+  });
 
-  const handleDelete = async (id: string) => {
-    try {
+  const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this todo?')) {
-        const response = await fetch(`/api/todo`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ id }), // Send just the id
-        });
-        if (response.ok) {
-          // Remove the deleted todo from state
-          setTodos(todos.filter(todo => todo.id !== id));
-          console.log(`Todo with ID ${id} deleted successfully.`);
-        } else {
-          console.error('Failed to delete todo:', response.statusText);
-        }
+      deleteMutation.mutate(id);
     }
-    } catch (error) {
-      console.error('Error deleting todo:', error);
-    }
-  }; 
+  };
+
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
 
   return (
     <main className="">
@@ -71,7 +68,7 @@ const Todos = () => {
             <span>Description</span>
             <span>Action</span>
           </li>
-          {todos.map((todo) => (
+          {dataTodo.map((todo: Todo) => (
             <li key={todo.id} className="flex justify-between items-center p-2 border-b cursor-pointer">
               <Link href={`/todo/${todo.id}`}>
                 <span>{todo.title}</span>

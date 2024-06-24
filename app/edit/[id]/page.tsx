@@ -1,108 +1,127 @@
-"use client";
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+'use client'
+import { useRouter } from 'next/navigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { todoSchema } from '@/lib/types';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { FC, useEffect } from 'react';
 
-const UpdateTodoForm = () => {
-  const router = useRouter();
-  const { id } = useParams();
-  const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    priority: 'Low',
-    assignedTo: '',
-    notes: '',
-  }); // Initialize formData as null until data is fetched
+interface EditTodo {
+  params: {
+    id: string;
+  }
+}
 
-  useEffect(() => {
-    const fetchTodo = async () => {
-      try {
-        const response = await fetch(`/api/todo/${id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch todo');
-        }
-        const data = await response.json();
-        setFormData(data[0]);
-      } catch (error) {
-        console.error('Error fetching todo:', error);
-      }
-    };
+const fetchTodo = async (id: string) => {
+  const response = await fetch(`/api/todo/${id}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch todo');
+  }
+  const data = await response.json();
+  return data; // Assuming the API returns the todo object directly
+};
 
-    if (id) {
-      fetchTodo();
-    }
-  }, [id]);
+const updateTodo = async (data: todoSchema & { id: string }) => {
+  const response = await fetch(`/api/todo`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+  });
 
-  if (!formData) {
-    return <p>Loading...</p>; // Show loading message while fetching data
+  if (!response.ok) {
+    throw new Error('Failed to update todo');
   }
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+  return response.json();
+};
 
-  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
+const UpdateTodoForm: FC<EditTodo> = ({ params }) => {
+  const { id } = params;
+  const router = useRouter();
+  const queryClient = useQueryClient();
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const { data: dataTodo, isLoading, error } = useQuery({
+    queryKey: ['todo', id],
+    queryFn: () => fetchTodo(id),
+    enabled: !!id, 
+  });
 
-    try {
-      const response = await fetch(`/api/todo`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<todoSchema>({
+    defaultValues: dataTodo,
+    resolver: zodResolver(todoSchema),
+  });
 
-      if (response.ok) {
-        router.push('/'); // Redirect to home page after successful update
-      } else {
-        console.error('Failed to update todo:', response.statusText);
-      }
-    } catch (error) {
-      console.error('Error updating todo:', error);
+  useEffect(() => {
+    if (dataTodo) {
+      console.log("Fetched dataTodo:", dataTodo[0]); // Debugging line
+      // dataTodo = dataTodo[0];
+      setValue('title', dataTodo[0].title);
+      setValue('description', dataTodo[0].description);
+      setValue('priority', dataTodo[0].priority);
+      setValue('assignedTo', dataTodo[0].assignedTo);
+      setValue('notes', dataTodo[0].notes);
     }
-  };
-//   console.log(formData)
-  return (
-    <div className='min-h-screen  p-20 '>
-      <h1 className='font-bold text-lg text-blue-700'>Update Todo : </h1>
-      
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 my-8 ml-12">
-            <div  className="flex flex-row items-baseline">
-                <label>Title:</label>
-                <input className="ml-4" type="text" value={formData.title || ''} onChange={handleInputChange} />
-            </div>
-            <div  className="flex flex-row items-baseline">
-                <label>Description:</label>
-                <textarea className="ml-4" name="description" value={formData.description || ''} onChange={handleInputChange} />
-            </div>
-            <div  className="flex flex-row items-baseline">
-                <label>Priority:</label>
-                {/* <select name="priority" value={formData.priority || 'Low'} onChange={handleSelectChange}>
-                */}
-                <select className="ml-4" name="priority" value={formData.priority} onChange={handleSelectChange}>
+  }, [dataTodo, setValue]);
 
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                </select>
-            </div>
-            <div  className="flex flex-row items-baseline">
-                <label>Assigned To:</label>
-                <input className="ml-4" type="text" name="assignedTo" value={formData.assignedTo || ''} onChange={handleInputChange} />
-            </div>
-            <div  className="flex flex-row items-baseline">
-                <label>Notes:</label>
-                <input className="ml-4" type="text" name="notes" value={formData.notes || ''} onChange={handleInputChange} />
-            </div>
+  const mutation = useMutation({
+    mutationKey: ['updateTodo'],
+    mutationFn: (data: todoSchema & { id: string }) => updateTodo(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['todo', id] });
+      router.push('/');
+    },
+    onError: (error: Error) => {
+      console.error('Error updating todo:', error.message);
+    },
+  });
+
+  const onSubmit = (data: todoSchema) => {
+    mutation.mutate({ ...data, id });
+  };
+
+  if (isLoading) {
+    return <p>Loading...</p>;
+  }
+
+  if (error) {
+    return <p>Error fetching todo: {error.message}</p>;
+  }
+
+  return (
+    <div className="min-h-screen p-20">
+      <h1 className="font-bold text-lg text-blue-700">Update Todo:</h1>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 my-8 ml-12">
+          <div className="flex flex-row items-baseline">
+            <label>Title:</label>
+            <input className="ml-4" type="text" {...register('title')} />
+            {errors.title && <p className="text-red-500">{errors.title.message}</p>}
+          </div>
+          <div className="flex flex-row items-baseline">
+            <label>Description:</label>
+            <textarea className="ml-4" {...register('description')} />
+            {errors.description && <p className="text-red-500">{errors.description.message}</p>}
+          </div>
+          <div className="flex flex-row items-baseline">
+            <label>Priority:</label>
+            <select className="ml-4" {...register('priority')}>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+            </select>
+          </div>
+          <div className="flex flex-row items-baseline">
+            <label>Assigned To:</label>
+            <input className="ml-4" type="text" {...register('assignedTo')} />
+          </div>
+          <div className="flex flex-row items-baseline">
+            <label>Notes:</label>
+            <input className="ml-4" type="text" {...register('notes')} />
+          </div>
         </div>
-        <button type="submit" style={{ width: '20%' }} className='ml-10 p-2 bg-blue-500 text-white'>Update Todo</button>
+        <button type="submit" style={{ width: '20%' }} className="ml-10 p-2 bg-blue-500 text-white">Update Todo</button>
       </form>
     </div>
   );
