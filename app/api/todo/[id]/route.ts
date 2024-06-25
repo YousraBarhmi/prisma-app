@@ -7,7 +7,7 @@ import prisma from '@/lib/db';
 export async function GET(req : Request, context : any) {
   try {
     console.log(context.params.id)
-    const todos = await prisma.todo.findMany({
+    const todos = await prisma.todo.findUnique({
       where: { id: context.params.id },
     });
     return NextResponse.json(todos, { status: 200 });

@@ -13,5 +13,8 @@ export const todoSchema = z.object({
   export interface Todo {
     id: string;
     title: string;
-    description: string;
+    description?: string;
+    priority?: string;
+    assignedTo?: string;
+    notes?: string;
   }

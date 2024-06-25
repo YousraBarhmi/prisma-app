@@ -1,39 +1,28 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { useParams } from 'next/navigation';
+import { useQuery } from '@tanstack/react-query'; // Ensure you are importing from '@tanstack/react-query'
+
+const fetchTodo = async (id : string) => {
+  const response = await fetch(`/api/todo/${id}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch todo');
+  }
+  const data = await response.json();
+  return data; // Assuming the API returns the todo object directly
+};
 
 const TodoById = () => {
-  const { id } = useParams();
-  const [todo, setTodo] = useState({
-    title: '',
-    description: '',
-    priority: 'Low',
-    assignedTo: '',
-    notes: '',
-  }); 
+  const { id } = useParams() as { id: string };
 
-  useEffect(() => {
-    const fetchTodo = async () => {
-      try {
-        const response = await fetch(`/api/todo/${id}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch todo');
-        }
-        const data = await response.json();
-        setTodo(data[0]);
-      } catch (error) {
-        console.error('Error fetching todo:', error);
-      }
-    };
 
-    if (id) {
-      fetchTodo();
-    }
-  }, [id]);
+  const { data: todo = [], isLoading, error } = useQuery({
+    queryKey: ['todo'],
+    queryFn: () => fetchTodo(id),
+  });
 
-  if (!todo) {
-    return <p>Loading...</p>; 
-  }
+  if (isLoading) return <p>Loading...</p>;
+  if (error) return <p>Error: {error.message}</p>;
 
   return (
     <div className='min-h-screen  p-20 '>

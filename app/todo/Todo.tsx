@@ -1,9 +1,7 @@
 "use client"
 import { todoSchema, Todo } from '@/lib/types';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
 
 
 const fetchTodos = async () => {
@@ -18,7 +16,7 @@ const fetchTodos = async () => {
 const Todos = () => {
   const queryClient = useQueryClient();
 
-  const { data: dataTodo = [], isLoading, error } = useQuery({
+  const { data: dataTodo, isLoading, error } = useQuery({
     queryKey: ['todo'],
     queryFn: () => fetchTodos(),
   });
@@ -68,7 +66,7 @@ const Todos = () => {
             <span>Description</span>
             <span>Action</span>
           </li>
-          {dataTodo.map((todo: Todo) => (
+          {Array.isArray(dataTodo) && dataTodo.map((todo: Todo) => (
             <li key={todo.id} className="flex justify-between items-center p-2 border-b cursor-pointer">
               <Link href={`/todo/${todo.id}`}>
                 <span>{todo.title}</span>

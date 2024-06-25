@@ -1,16 +1,10 @@
 'use client'
-import { useRouter } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { todoSchema } from '@/lib/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FC, useEffect } from 'react';
-
-interface EditTodo {
-  params: {
-    id: string;
-  }
-}
 
 const fetchTodo = async (id: string) => {
   const response = await fetch(`/api/todo/${id}`);
@@ -37,8 +31,8 @@ const updateTodo = async (data: todoSchema & { id: string }) => {
   return response.json();
 };
 
-const UpdateTodoForm: FC<EditTodo> = ({ params }) => {
-  const { id } = params;
+const UpdateTodoForm = () => {
+  const { id } = useParams() as { id: string };
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -55,13 +49,13 @@ const UpdateTodoForm: FC<EditTodo> = ({ params }) => {
 
   useEffect(() => {
     if (dataTodo) {
-      console.log("Fetched dataTodo:", dataTodo[0]); // Debugging line
+      console.log("Fetched dataTodo:", dataTodo); // Debugging line
       // dataTodo = dataTodo[0];
-      setValue('title', dataTodo[0].title);
-      setValue('description', dataTodo[0].description);
-      setValue('priority', dataTodo[0].priority);
-      setValue('assignedTo', dataTodo[0].assignedTo);
-      setValue('notes', dataTodo[0].notes);
+      setValue('title', dataTodo.title);
+      setValue('description', dataTodo.description);
+      setValue('priority', dataTodo.priority);
+      setValue('assignedTo', dataTodo.assignedTo);
+      setValue('notes', dataTodo.notes);
     }
   }, [dataTodo, setValue]);
 
